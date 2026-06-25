@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Happy Birthday Hanon!</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        /* حاوية التهنئة في منتصف الشاشة تماماً */
+        .celebration-content {
+            position: absolute;
+            z-index: 10;
+            text-align: center;
+            opacity: 0;
+            transform: scale(0.7);
+            transition: all 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.65);
+            padding: 40px 60px;
+            border-radius: 25px;
+            border: 2px solid rgba(255, 105, 180, 0.3);
+            box-shadow: 0 0 35px rgba(255, 20, 147, 0.25);
+        }
+        
+        /* تفعيل الظهور */
+        .celebration-content.show {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+
+        /* الاسم بالإنجليزية */
+        .name {
+            font-size: 5em;
+            font-weight: 900;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            animation: textColorChange 4s infinite alternate, pulse 2s infinite ease-in-out;
+        }
+
+        /* رقم العمر تحت الاسم */
+        .age-highlight {
+            font-size: 4em;
+            font-weight: 900;
+            margin: 10px 0;
+            display: block;
+            animation: textColorChange 3s infinite reverse, pulse 2s infinite ease-in-out;
+        }
+
+        /* جملة happy birthday hanon تحت الرقم */
+        .message {
+            font-size: 2.2em;
+            font-weight: bold;
+            text-transform: lowercase;
+            margin: 0;
+            letter-spacing: 1px;
+            animation: textColorChange 5s infinite alternate, pulse 2s infinite ease-in-out;
+        }
+        
+        /* شاشة العد التنازلي من 10 لـ 0 */
+        #intro-countdown {
+            position: absolute;
+            font-size: 8em;
+            font-weight: 900;
+            color: #ff1493;
+            text-shadow: 0 0 20px #ff1493, 0 0 40px #ff69b4;
+            z-index: 30;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        /* شاشة البدء */
+        #start-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        .start-btn {
+            background: linear-gradient(45deg, #ff1493, #ff69b4);
+            color: white;
+            border: none;
+            padding: 18px 45px;
+            font-size: 1.8em;
+            font-weight: bold;
+            border-radius: 50px;
+            box-shadow: 0 0 25px rgba(255, 20, 147, 0.6);
+            cursor: pointer;
+            transition: transform 0.2s;
+            animation: pulse 1.5s infinite;
+        }
+
+        /* تأثيرات الألوان الإبداعية والنبض */
+        @keyframes textColorChange {
+            0% { color: #ff69b4; text-shadow: 0 0 15px #ff69b4, 0 0 30px #ff1493; }
+            33% { color: #00ffff; text-shadow: 0 0 15px #00ffff, 0 0 30px #00bfff; }
+            66% { color: #ffff00; text-shadow: 0 0 15px #ffff00, 0 0 30px #ffd700; }
+            100% { color: #da70d6; text-shadow: 0 0 15px #da70d6, 0 0 30px #ba55d3; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- شاشة البداية لتشغيل الصوت مباشرة دون حظر المتصفح -->
+    <div id="start-overlay" onclick="startCelebration()">
+        <button class="start-btn">Open Surprise 🎁</button>
+    </div>
+
+    <div id="container">
+        <!-- عداد الـ 10 ثواني المبدئي -->
+        <div id="intro-countdown" style="display: none;">10</div>
+
+        <!-- محتوى عيد الميلاد في منتصف الشاشة تماماً -->
+        <div class="celebration-content" id="birthday-content">
+            <div class="name">Asil</div>
+            <div class="age-highlight">23</div>
+            <div class="message">happy birthday SOSO ✨</div>
+        </div>
+
+        <canvas id="fireworks"></canvas>
+        
+        <!-- الأغنية المطلوبة (بدون خاصية loop عشان تشتغل مرة واحدة بس) -->
+        <audio id="bg-music">
+            <source src="https://files.catbox.moe/7he7y7.mp3" type="audio/mpeg">
+        </audio>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('fireworks');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let startFireworks = false;
+
+        class Firework {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.particles = [];
+                for (let i = 0; i < 70; i++) {
+                    this.particles.push({
+                        x: x,
+                        y: y,
+                        vx: (Math.random() - 0.5) * 9,
+                        vy: (Math.random() - 0.5) * 9,
+                        alpha: 1
+                    });
+                }
+            }
+            update() {
+                this.particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.alpha -= 0.012;
+                });
+            }
+            draw() {
+                this.particles.forEach(p => {
+                    ctx.fillStyle = this.color;
+                    ctx.globalAlpha = p.alpha;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+        }
+
+        let fireworks = [];
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (startFireworks && Math.random() < 0.3) {
+                fireworks.push(new Firework(
+                    Math.random() * canvas.width, 
+                    Math.random() * canvas.height * 0.65, 
+                    `hsl(${Math.random() * 360}, 100%, 65%)`
+                ));
+            }
+            
+            fireworks.forEach((fw, i) => {
+                fw.update();
+                fw.draw();
+                fw.particles = fw.particles.filter(p => p.alpha > 0);
+                if (fw.particles.length === 0) fireworks.splice(i, 1);
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // دالة البدء المزامنة بالمللي ثانية مع صوت الأغنية الرسمي
+        function startCelebration() {
+            document.getElementById('start-overlay').style.display = 'none';
+            
+            const introCountdown = document.getElementById('intro-countdown');
+            const birthdayContent = document.getElementById('birthday-content');
+            const audio = document.getElementById('bg-music');
+            
+            introCountdown.style.display = 'block';
+            
+            // تشغيل الأغنية فوراً
+            audio.play().catch(err => console.log("Audio playback error:", err));
+
+            // المزامنة الذكية: نراقب وقت الأغنية الحالي ثانية بثانية لتحديث الرقم
+            let lastTime = -1;
+            let countdownEnded = false;
+
+            const syncTimer = setInterval(() => {
+                if (countdownEnded) return;
+
+                // قراءة الوقت الحالي للأغنية بالثواني
+                let currentTime = Math.floor(audio.currentTime);
+
+                if (currentTime !== lastTime) {
+                    lastTime = currentTime;
+                    let timeLeft = 10 - currentTime; // لأن العد تنازلي من 10 ثواني
+
+                    if (timeLeft >= 0) {
+                        introCountdown.innerText = timeLeft;
+                        // تأثير تكبير خفيف مع كل رقم جديد
+                        introCountdown.style.transform = 'scale(1.2)';
+                        setTimeout(() => {
+                            introCountdown.style.transform = 'scale(1)';
+                        }, 200);
+                    } else {
+                        // انتهى الـ 10 ثواني بالظبط مع صوت الأغنية
+                        countdownEnded = true;
+                        clearInterval(syncTimer);
+                        
+                        introCountdown.style.opacity = '0';
+                        introCountdown.style.transform = 'scale(0)';
+                        
+                        setTimeout(() => {
+                            introCountdown.remove();
+                            // إظهار الكلام والترتيب الاحترافي في النص
+                            birthdayContent.classList.add('show');
+                            // إطلاق الألعاب النارية
+                            startFireworks = true;
+                        }, 300);
+                    }
+                }
+            }, 50); // فحص سريع جداً كل 50 مللي ثانية لضمان دقة متناهية
+        }
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
